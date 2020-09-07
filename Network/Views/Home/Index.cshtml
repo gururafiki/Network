@@ -1,0 +1,952 @@
+﻿<script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis-network.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis.css" />
+<link rel="stylesheet" href="/Scripts/datatables.net-bs/css/dataTables.bootstrap.min.css" />
+<link rel="stylesheet" href="/Scripts/datatables.net-buttons-bs/css/buttons.bootstrap.min.css" />
+<link rel="stylesheet" href="/Scripts/datatables.net-fixedheader-bs/css/fixedHeader.bootstrap.min.css" />
+<link rel="stylesheet" href="/Scripts/datatables.net-responsive-bs/css/responsive.bootstrap.min.css" />
+<link rel="stylesheet" href="/Scripts/datatables.net-scroller-bs/css/scroller.bootstrap.min.css" />
+<script src="/Scripts/datatables.net/js/jquery.dataTables.min.js"></script>
+<script src="/Scripts/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
+<script src="/Scripts/datatables.net-buttons/js/dataTables.buttons.min.js"></script>
+<script src="/Scripts/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
+<script src="/Scripts/datatables.net-buttons/js/buttons.flash.min.js"></script>
+<script src="/Scripts/datatables.net-buttons/js/buttons.html5.min.js"></script>
+<script src="/Scripts/datatables.net-buttons/js/buttons.print.min.js"></script>
+<script src="/Scripts/datatables.net-fixedheader/js/dataTables.fixedHeader.min.js"></script>
+<script src="/Scripts/datatables.net-keytable/js/dataTables.keyTable.min.js"></script>
+<script src="/Scripts/datatables.net-responsive/js/dataTables.responsive.min.js"></script>
+<script src="/Scripts/datatables.net-responsive-bs/js/responsive.bootstrap.js"></script>
+<script src="/Scripts/datatables.net-scroller/js/dataTables.scroller.min.js"></script>
+
+<style>
+    td.details-control {
+        background: url('../resources/details_open.png') no-repeat center center;
+        cursor: pointer;
+    }
+
+    tr.shown td.details-control {
+        background: url('../resources/details_close.png') no-repeat center center;
+    }
+
+    label {
+        width: 100%;
+    }
+
+    .label-span {
+        clear: both;
+        float: left;
+    }
+
+    .label-help {
+        color: grey;
+        font-size: 10px;
+    }
+
+    #datatable-buttons_filter {
+        float: right;
+    }
+</style>
+<div class="row">
+    <div class="col-sm-8" id="graph" style="height:80vh;">
+    </div>
+    <div class="col-sm-4" style="height:80vh;">
+        <div class="col-sm-12 nodes-init" style="display:none;" count="0">
+            <h2>Nodes</h2>
+            <p>
+                Click to initialize nodes for testing
+            </p>
+            <p><a class="btn btn-default" id="initialize-nodes">Initialize &raquo;</a></p>
+        </div>
+        <div class="col-sm-12 edges-init" style="display:none;">
+            <h2>Edges</h2>
+            <p>
+                Click to initialize edges for testing
+            </p>
+            <p><a class="btn btn-default" id="initialize-edges">Initialize &raquo;</a></p>
+        </div>
+        <div class="col-xs-12 system-settings" style="display:none;">
+            <h2>System Settings</h2>
+            <p>
+
+            </p>
+            <select name="mode" style="border: none;margin-bottom: 10px;">
+                <option value="Datagram" seleceted>Datagram mode</option>
+                <option value="VirtualChannel">Virtual channel</option>
+            </select>
+            <label for="maxsize"><span class="label-span">Max packet size </span><span class="label-span label-help hidden-sm">(recommended at least 32)</span></label>
+            <input type="number" name="max-packet-size" value="32" style="width:100%" />
+
+            <label for="maxsize"><span class="label-span">Max service packet size </span><span class="label-span label-help hidden-sm">(recommended at least 8)</span></label>
+            <input type="number" name="max-service-packet-size" value="8" style="width:100%" />
+
+            <label for="error-probability"><span class="label-span">Error probability</span><span class="label-span label-help hidden-sm">(does not changes if -1)</span></label>
+            <input type="number" name="error-probability" value="0.1" style="width:100%" />
+
+            <select name="channel-type" style="border: none;margin-bottom: 10px;">
+                <option value="-1" seleceted>Don't change channels type</option>
+                <option value="1">Duplex</option>
+                <option value="0">Semi duplex</option>
+            </select>
+
+            <p style="margin-top:10px;">
+                <a class="btn btn-default" id="save-settings">Save</a>
+            </p>
+            <hr />
+            <h2>Interface Settings</h2>
+            <p></p>
+
+            <select name="update" style="border: none;margin-bottom: 10px;">
+                <option value="0" seleceted>Updates Disabled</option>
+                <option value="1">Updates Enabled</option>
+            </select>
+            <a class="btn btn-default" name="save-position">Set positions</a>
+
+        </div>
+        <div class="col-xs-12 route-manager" style="display:none;">
+            <hr>
+            <p class="hidden-sm">
+                Try to get info about available route between stations.
+            </p>
+            <div class="col-xs-6">
+                <label for="route-from-id"><span class="label-span">From (ID)</span></label>
+                <input type="number" name="route-from-id" style="width:100%" />
+            </div>
+            <div class="col-xs-6">
+                <label for="route-to-id"><span class="label-span">To (ID)</span></label>
+                <input type="number" name="route-to-id" style="width:100%" />
+            </div>
+
+            <p class="col-xs-12" style="margin-top:10px;">
+                <a class="btn btn-default" id="get-route">Get route</a>
+            </p>
+
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-4 col-sm-12">
+        <hr />
+        <h2>Create Messages</h2>
+        <p style="color:#5b5a5a;font-size:12px;">
+            Messages will be added to queues.
+        </p>
+
+        <p style="color:#808080;font-size:11px;">
+            If source/destination station is empty or doesn't exits action will generate random endpoints.
+        </p>
+        <label for="size"><span class="label-span">Message size </span><span class="label-span label-help">(recommended max size 1000)</span></label>
+        <input type="number" name="size" style="width:100%" value="128" />
+        <label for="source-id"><span class="label-span">Source id</span></label>
+        <input type="number" name="source-id" style="width:100%" />
+        <label for="destination-id"><span class="label-span">Destination id</span></label>
+        <input type="number" name="destination-id" style="width:100%" />
+
+        <label for="count"><span class="label-span">Count</span></label>
+        <input type="number" name="count" style="width:100%" value="25" />
+
+        <label for="interval"><span class="label-span">Interval</span><span class="label-span label-help">(interval for creating messages in ms)</span></label>
+        <input type="number" name="interval" style="width:100%" value="100" />
+        <p style="margin-top:10px;">
+            <a class="btn btn-default" id="generate-messages">Generate &raquo;</a>
+            <a class="btn btn-danger" id="clear-messages">Clear &raquo;</a>
+            <a class="btn btn-info" data-toggle="modal" data-target="#testResult">View &raquo;</a>
+
+        </p>
+    </div>
+    <div class="col-md-4 col-sm-12">
+        <hr />
+        <h2>Station manager</h2>
+        <p style="color:#5b5a5a;font-size:12px;">
+            Here you can create or update stations
+
+        </p>
+        <label for="station-id"><span class="label-span">ID</span><span class="label-span label-help">(Left ID empty to create station)</span></label>
+        <input type="number" name="station-id" style="width:100%" />
+        <label for="region"><span class="label-span">Region</span><span class="label-span label-help">(by default 0)</span></label>
+        <input type="number" name="station-region" style="width:100%" />
+        <p style="margin-top:10px;">
+            <a class="btn btn-default" id="apply-station">Apply &raquo;</a>
+            <a class="btn btn-info" id="view-station">View &raquo;</a>
+            <a class="btn btn-danger" id="delete-station">Delete &raquo;</a>
+        </p>
+    </div>
+    <div class="col-md-4 col-sm-12">
+        <hr />
+        <h2>Channel managment</h2>
+        <p style="color:#5b5a5a;font-size:12px;">
+            Manage channel beetween stations.
+        </p>
+
+        <select name="channel-is-duplex" style="border: none;margin-bottom: 10px;">
+            <option value="1" seleceted>Duplex</option>
+            <option value="0">Semi-Duplex</option>
+        </select>
+
+        <label for="error-probability"><span class="label-span">Error probability</span><span class="label-span label-help">(dependent on packet size)</span></label>
+        <input type="number" name="channel-error-probability" max="1" min="0" style="width:100%" />
+        <label for="weight"><span class="label-span">Weight</span><span class="label-span label-help">(2,4,...,28)</span></label>
+        <input type="number" name="channel-weight" style="width:100%" />
+        <label for="size"><span class="label-span">From </span><span class="label-span label-help">(ID)</span></label>
+        <input type="number" name="channel-from-id" style="width:100%" />
+        <label for="size"><span class="label-span">To </span><span class="label-span label-help">(ID)</span></label>
+        <input type="number" name="channel-to-id" style="width:100%" />
+        <p style="margin-top:10px;">
+            <a class="btn btn-default" id="apply-channel">Apply &raquo;</a>
+            <a class="btn btn-info" id="view-channel">View &raquo;</a>
+            <a class="btn btn-danger" id="delete-channel">Delete &raquo;</a>
+        </p>
+    </div>
+</div>
+<div class="row">
+    <div class="col-xs-12">
+        <hr />
+        <table id="datatable-buttons" class="table table-striped table-bordered" style="overflow-x:scroll;">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Packets</th>
+                    <th>Size</th>
+                    <th>Source</th>
+                    <th>Destination</th>
+                    <th>Status</th>
+                    <th>Time spent (ms)</th>
+                    <th style="min-width:400px">MessageLog</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="testResult" class="modal fade" role="dialog">
+    <div class="modal-dialog">
+
+        <!-- Modal content-->
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title">Test result</h4>
+            </div>
+            <div class="modal-body">
+                <table id="result-table" class="table table-striped table-bordered">
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+<!-- Modal -->
+<div id="testRoute" class="modal fade" role="dialog">
+    <div class="modal-dialog">
+
+        <!-- Modal content-->
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title">Test result</h4>
+            </div>
+            <div class="modal-body">
+                <table id="route-table" class="table table-striped table-bordered">
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+<script>
+    var table = $("#datatable-buttons").DataTable();
+</script>
+<script>
+    $('#testResult').on('shown.bs.modal', function () {
+        $.ajax({
+            method: 'GET',
+            url: "/api/messages/result",
+            success: function (result) {
+                $("#result-table>tbody").html(result);
+            }
+        });
+    });
+    $("#generate-messages").bind('click', function () {
+        var sourceID = Number($('input[name="source-id"]').val());
+        var destinationID = Number($('input[name="destination-id"]').val());
+        var size = Number($('input[name="size"]').val());
+        var count = Number($('input[name="count"]').val());
+        var interval = Number($('input[name="interval"]').val());
+
+        if (interval == 0)
+            PostMessage({
+                Size: size,
+                Count: count,
+                SourceID: sourceID,
+                DestinationID: destinationID
+            });
+        else {
+            counter = count;
+            var createTimer = setInterval(function () {
+                if (counter > 0) {
+                    PostMessage({
+                        Size: size,
+                        Count: 1,
+                        SourceID: sourceID,
+                        DestinationID: destinationID
+                    });
+                }
+                else {
+                    clearInterval(createTimer);
+                }
+                counter--;
+            }, interval);
+        }
+
+    });
+    function PostMessage(postData) {
+        $.ajax({
+            method: 'POST',
+            url: "/api/messages",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            data: JSON.stringify(postData),
+            success: function (result) {
+
+            }
+        });
+    }
+    $("#save-settings").bind('click', function () {
+        PutSettings({
+            maxPacketSize: $('input[name="max-packet-size"]').val(),
+            servicePacketSize: $('input[name="max-service-packet-size"]').val(),
+            errorProbability: $('input[name="error-probability"]').val(),
+            duplex: $('select[name="channel-type"]').val(),
+            mode: $('select[name="mode"]').val(),
+        });
+    });
+    $("#clear-messages").bind('click', function () {
+        $.ajax({
+            method: 'DELETE',
+            url: "/api/messages",
+            success: function (result) {
+
+            }
+        });
+    });
+    $('#get-route').bind('click', function () {
+        var sourceID = $('input[name="route-from-id"]').val();
+        var destinationID = $('input[name="route-to-id"]').val();
+        $.ajax({
+            method: 'GET',
+            url: "/api/edges",
+            data: {
+                sourceID: sourceID,
+                destinationID: destinationID
+            },
+            success: function (result) {
+                var html = `<tr><td>Route</td><td>Stations count</td></tr>`;
+                for (var i = 0; i < result.length; i++) {
+                    html += `<tr><td>${result[i].RouteSheet}</td><td>${result[i].StationsCount}</td></tr>`
+                }
+                $("#route-table>tbody").html(html);
+                $("#testRoute").modal('show');
+            }
+        });
+    });
+
+
+    var initialEdges = [
+        {
+            SourceID: 1,
+            DestinationID: 2,
+            Weight: 2
+        },
+        {
+            SourceID: 1,
+            DestinationID: 3,
+            Weight: 4
+        },
+        {
+            SourceID: 2,
+            DestinationID: 4,
+            Weight: 7
+        },
+        {
+            SourceID: 2,
+            DestinationID: 5,
+            Weight: 8
+        },
+        {
+            SourceID: 5,
+            DestinationID: 1,
+            Weight: 11
+        },
+        {
+            SourceID: 5,
+            DestinationID: 6,
+            Weight: 15
+        },
+        {
+            SourceID: 5,
+            DestinationID: 7,
+            Weight: 17
+        },
+        {
+            SourceID: 8,
+            DestinationID: 4,
+            Weight: 20
+        },
+        {
+            SourceID: 8,
+            DestinationID: 1,
+            Weight: 24
+        },
+        {
+            SourceID: 8,
+            DestinationID: 3,
+            Weight: 25
+        },
+        {
+            SourceID: 11,
+            DestinationID: 9,
+            Weight: 2
+        },
+        {
+            SourceID: 11,
+            DestinationID: 13,
+            Weight: 4
+        },
+        {
+            SourceID: 9,
+            DestinationID: 16,
+            Weight: 7
+        },
+        {
+            SourceID: 9,
+            DestinationID: 12,
+            Weight: 8
+        },
+        {
+            SourceID: 12,
+            DestinationID: 11,
+            Weight: 11
+        },
+        {
+            SourceID: 12,
+            DestinationID: 10,
+            Weight: 15
+        },
+        {
+            SourceID: 12,
+            DestinationID: 15,
+            Weight: 17
+        },
+        {
+            SourceID: 14,
+            DestinationID: 16,
+            Weight: 20
+        },
+        {
+            SourceID: 14,
+            DestinationID: 11,
+            Weight: 24
+        },
+        {
+            SourceID: 14,
+            DestinationID: 13,
+            Weight: 25
+        },
+        {
+            SourceID: 24,
+            DestinationID: 19,
+            Weight: 2
+        },
+        {
+            SourceID: 24,
+            DestinationID: 17,
+            Weight: 4
+        },
+        {
+            SourceID: 19,
+            DestinationID: 22,
+            Weight: 7
+        },
+        {
+            SourceID: 19,
+            DestinationID: 18,
+            Weight: 8
+        },
+        {
+            SourceID: 18,
+            DestinationID: 24,
+            Weight: 11
+        },
+        {
+            SourceID: 18,
+            DestinationID: 23,
+            Weight: 15
+        },
+        {
+            SourceID: 18,
+            DestinationID: 21,
+            Weight: 17
+        },
+        {
+            SourceID: 20,
+            DestinationID: 22,
+            Weight: 20
+        },
+        {
+            SourceID: 20,
+            DestinationID: 24,
+            Weight: 24
+        },
+        {
+            SourceID: 20,
+            DestinationID: 17,
+            Weight: 25
+        },
+        {
+            SourceID: 1,
+            DestinationID: 9,
+            Weight: 28
+        },
+        {
+            SourceID: 1,
+            DestinationID: 24,
+            Weight: 28
+        },
+        {
+            SourceID: 9,
+            DestinationID: 24,
+            Weight: 28
+        }
+    ];
+    var initialNodes = [
+        {
+            Region: 1,
+        },
+        {
+            Region: 1,
+        },
+        {
+            Region: 1,
+        },
+        {
+            Region: 1,
+        },
+        {
+            Region: 1,
+        },
+        {
+            Region: 1,
+        },
+        {
+            Region: 1,
+        },
+        {
+            Region: 1,
+        },
+        {
+            Region: 2,
+        },
+        {
+            Region: 2,
+        },
+        {
+            Region: 2,
+        },
+        {
+            Region: 2,
+        },
+        {
+            Region: 2,
+        },
+        {
+            Region: 2,
+        },
+        {
+            Region: 2,
+        },
+        {
+            Region: 2,
+        },
+        {
+            Region: 3,
+        },
+        {
+            Region: 3,
+        },
+        {
+            Region: 3,
+        },
+        {
+            Region: 3,
+        },
+        {
+            Region: 3,
+        },
+        {
+            Region: 3,
+        },
+        {
+            Region: 3,
+        },
+        {
+            Region: 3,
+        }
+    ];
+    $('select[name="update"]').change(function (e) {
+        try {
+            clearInterval(updateTimer);
+            clearInterval(updateTableTimer);
+        }
+        catch (err) {
+            console.log(err);
+        }
+        finally {
+            if ($(this).val() == '1') {
+
+                updateTimer = setInterval(function () {
+                    GetNodes(true);
+                }, 1000);
+
+                updateTableTimer = setInterval(function () {
+                    GetMessages();
+                }, 5000);
+            }
+        }
+    });
+    $('a[name="save-position"]').bind('click', function () {
+        SavePosition();
+    });
+    $('a[name="get-positions"]').bind('click', function () {
+        GetNodes(true);
+        network.setData({ nodes: nodes, edges: edges });
+    });
+    $("#initialize-nodes").bind('click', function () {
+        PostNodes(initialNodes);
+    });
+    $("#apply-channel").bind('click', function () {
+        var errProb = Number($('input[name="channel-error-probability"]').val());
+        var from = Number($('input[name="channel-from-id"]').val());
+        var to = Number($('input[name="channel-to-id"]').val());
+        var weight = Number($('input[name="channel-weight"]').val());
+        var isDuplex = Number($('select[name="channel-is-duplex"]').val());
+        if (from <= 0 || to <= 0 || weight <= 0 || errProb > 1)
+            return;
+
+        PostEdges([
+            {
+                SourceID: from,
+                DestinationID: to,
+                Weight: weight,
+                ErrorProbability: errProb,
+                Duplex: isDuplex > 0
+            }
+        ]);
+    });
+    $("#apply-station").bind('click', function () {
+        var id = Number($('input[name="station-id"]').val());
+        var region = Number($('input[name="station-region"]').val());
+        if (region == 0)
+            return;
+
+        if (id === 0) {
+            PostNodes([{ Region: region }]);
+        }
+    });
+    $("#delete-station").bind('click', function () {
+        var id = Number($('input[name="station-id"]').val());
+
+        if (id !== 0) {
+            DeleteNode(id);
+        }
+    });
+    $("#initialize-edges").bind('click', function () {
+        PostEdges(initialEdges);
+    });
+
+    $(function () {
+        GetNodes();
+        GetMessages();
+    });
+    function DeleteNode(id) {
+        $.ajax({
+            method: 'DELETE',
+            url: `/api/nodes?id=${id}`,
+            success: function (result) {
+                GetNodes();
+                alert('Success');
+            }
+        });
+    }
+    function PostEdges(postData) {
+        $.ajax({
+            method: 'POST',
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            url: "/api/edges",
+            data: JSON.stringify(postData),
+            success: function (result) {
+                if ($('select[name="update"]').val() == '0')
+                    location.reload();
+            }
+        });
+    }
+    function PostNodes(postData) {
+        $.ajax({
+            method: 'POST',
+            url: "/api/nodes/create",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            data: JSON.stringify(postData),
+            success: function (result) {
+                GetNodes();
+                alert('Success');
+            }
+        });
+    }
+    function PutSettings(putData) {
+        console.log(putData);
+        $.ajax({
+            method: 'PUT',
+            url: `/api/messages?mode=${putData.mode}&maxPacketSize=${putData.maxPacketSize}&servicePacketSize=${putData.servicePacketSize}&errorProbability=${putData.errorProbability}&duplex=${putData.duplex}`,
+            success: function (result) {
+                alert('Success');
+            }
+        });
+    }
+    function GetMessages() {
+        $.ajax({
+            method: 'GET',
+            url: "/api/messages/all",
+            success: function (result) {
+                var table = $("#datatable-buttons").DataTable();
+                table.clear();
+                if (result.length > 0) {
+                    for (var i = 0; i < result.length; i++) {
+                        DrawMessage(table, result[i]);
+                    }
+                }
+            }
+        });
+    }
+    function DrawMessage(table, data) {
+        table.row.add([data.ID, data.PacketsCount, data.Size, data.Source.Name, data.Destination.Name, data.Status, data.TimeSpent, data.MessageLog.join('<br>')]).draw();
+    }
+    function GetNodes(includeCoords = false) {
+        $.ajax({
+            url: (includeCoords ? "/api/nodes/include-coords" : "/api/nodes/exclude-coords"),
+            success: function (result) {
+                nodes = result;
+                if (nodes.length == 0) {
+                    $('select[name="update"]').val(0);
+                    $('.system-settings').hide();
+                    $('.route-manager').hide();
+                    $('.nodes-init').show();
+                    $('.edges-init').hide();
+                }
+                else {
+                    $('.nodes-init').hide();
+                    GetEdges(redrawNetwork);
+                }
+            }
+        });
+    }
+    function GetEdges(onsuccess) {
+        $.ajax({
+            url: "/api/edges",
+            success: function (result) {
+                onsuccess(result);
+            }
+        });
+    }
+
+    function redrawNetwork(result) {
+        edges = result;
+        if (edges.length == 0) {
+            $('.edges-init').show();
+            $('.route-manager').hide();
+            $('.system-settings').hide();
+        }
+        else {
+            $('.edges-init').hide();
+            $('.route-manager').show();
+            $('.system-settings').show();
+            if (network == undefined) {
+                buildGraph(nodes, edges);
+                //SavePostion();
+            }
+            else {
+                network.setData({ nodes: nodes, edges: edges });
+                //network.redraw();
+            }
+        }
+    }
+    var nodes = [];
+    var edges = [];
+    var updateTimer = 0;
+    var updateTableTimer = 0;
+    var network = undefined;
+    var counter = 0;
+    var clusterIndex = 0;
+    var clusters = [];
+    var lastClusterZoomLevel = 0;
+    var clusterFactor = 0.9;
+    /*
+    checkAndBuild();
+    function checkAndBuild() {
+        if (nodes.length == 0 || edges.length == 0)
+            setTimeout(function () { checkAndBuild() }, 200);
+        else
+            buildGraph(nodes, edges);
+    }
+    */
+    function SavePosition() {
+        var objectCoords = network.getPositions();
+        var requestData = [];
+        for (var nodeID in objectCoords) {
+            if (objectCoords.hasOwnProperty(nodeID))
+                requestData.push({
+                    id: nodeID,
+                    x: objectCoords[nodeID].x,
+                    y: objectCoords[nodeID].y
+                });
+        }
+        $.ajax({
+            method: 'POST',
+            url: "/api/nodes/coords",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            data: JSON.stringify(requestData),
+            success: function (result) {
+                GetNodes(true);
+            }
+        });
+    }
+    function buildGraph(nodes, edges) {
+        // create a network
+        var container = document.getElementById('graph');
+        var data = {
+            nodes: nodes,
+            edges: edges
+        };
+        var options = {
+            nodes: {
+                shape: 'box'
+            },
+            edges: {
+                smooth: {
+                    enabled: true,
+                    type: 'curvedCW',
+                    roundness: 0.2
+                }
+            },
+            layout: {
+                hierarchical: {
+                    enabled: false,
+                    levelSeparation: 200,
+                    nodeSpacing: 100,
+                    treeSpacing: 100,
+                    blockShifting: true,
+                    edgeMinimization: false,
+                    parentCentralization: true,
+                    direction: 'LR',        // UD, DU, LR, RL
+                    sortMethod: 'hubsize'   // hubsize, directed
+                }
+            },
+            physics: {
+                enabled: false,
+                stabilization: {
+                    enabled: true,
+                    //onlyDynamicEdges: true
+                }
+            },
+        };
+        network = new vis.Network(container, data, options);
+        // set the first initial zoom level
+        network.once('initRedraw', function () {
+            if (lastClusterZoomLevel === 0) {
+                lastClusterZoomLevel = network.getScale();
+            }
+        });
+
+        // we use the zoom event for our clustering
+        network.on('zoom', function (params) {
+            if (params.direction == '-') {
+                if (params.scale < lastClusterZoomLevel * clusterFactor) {
+                    makeClusters(params.scale);
+                    lastClusterZoomLevel = params.scale;
+                }
+            }
+            else {
+                openClusters(params.scale);
+            }
+        });
+
+        // if we click on a node, we want to open it up!
+        network.on("selectNode", function (params) {
+            if (params.nodes.length == 1) {
+                if (network.isCluster(params.nodes[0]) == true) {
+                    network.openCluster(params.nodes[0])
+                }
+            }
+        });
+    }
+
+    // make the clusters
+    function makeClusters(scale) {
+        var colors = ['#AFBAE5', '#AFE5B6', '#FE8787'];
+        var clusterOptionsByData;
+        for (var i = 0; i < colors.length; i++) {
+            var color = colors[i];
+            clusterOptionsByData = {
+                joinCondition: function (childOptions) {
+                    return childOptions.color.background == color; // the color is fully defined in the node.
+                },
+                processProperties: function (clusterOptions, childNodes, childEdges) {
+                    var totalMass = 0;
+                    for (var i = 0; i < childNodes.length; i++) {
+                        totalMass += childNodes[i].mass;
+                    }
+                    clusterOptions.mass = totalMass;
+                    return clusterOptions;
+                },
+                clusterNodeProperties: { id: 'cluster:' + color, borderWidth: 3, shape: 'image', image: '/images/Network-Drive-icon.png', label: 'Cluster' }
+            };
+            network.cluster(clusterOptionsByData);
+        }
+        //network.clusterOutliers(clusterOptionsByData);
+
+        // since we use the scale as a unique identifier, we do NOT want to fit after the stabilization
+        network.setOptions({ physics: { stabilization: { fit: false } } });
+        network.stabilize();
+    }
+    // open them back up!
+    function openClusters(scale) {
+        var newClusters = [];
+        var declustered = false;
+        for (var i = 0; i < clusters.length; i++) {
+            if (clusters[i].scale < scale) {
+                network.openCluster(clusters[i].id);
+                lastClusterZoomLevel = scale;
+                declustered = true;
+            }
+            else {
+                newClusters.push(clusters[i])
+            }
+        }
+        clusters = newClusters;
+        if (declustered === true && document.getElementById('stabilizeCheckbox').checked === true) {
+            // since we use the scale as a unique identifier, we do NOT want to fit after the stabilization
+            network.setOptions({ physics: { stabilization: { fit: false } } });
+            network.stabilize();
+        }
+    }
+</script>
